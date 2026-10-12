@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>CerviAI | Create Account</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='signup.css') }}">
+
+
+</head>
+
+<body class="auth-page">
+
+<header class="navbar">
+
+<a href="{{ url_for('home') }}" class="logo">
+    <span class="logo-mark">✦</span>
+    Cervi<span>AI</span>
+</a>
+
+<div class="nav-right">
+    <a href="{{ url_for('home') }}" class="home-link">
+        Home
+    </a>
+</div>
+
+</header>
+
+<div class="auth-wrapper">
+
+<div class="auth-form-section">
+
+    <div class="auth-form-content">
+
+        <div class="auth-small-title">
+            GET STARTED
+        </div>
+
+        <h1>Create your account</h1>
+
+        <p class="auth-subtitle">
+            Create an account to access CerviAI screening support.
+        </p>
+
+        {% if error %}
+        <div class="form-error">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="{{ url_for('signup') }}" method="POST">
+
+            <div class="input-group">
+                <label for="name">Full Name</label>
+
+                <input
+                    type="text"
+                    id="name"
+                    name="username"
+                    placeholder="Enter your full name"
+                    required
+                >
+            </div>
+
+            <div class="input-group">
+                <label for="email">Email Address</label>
+
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Enter your email"
+                    required
+                >
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Create a password"
+                    required
+                >
+            </div>
+
+            <div class="input-group">
+                <label for="confirm_password">Confirm Password</label>
+
+                <input
+                    type="password"
+                    id="confirm_password"
+                    name="confirm_password"
+                    placeholder="Confirm your password"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="auth-button">
+                Create Account
+                <span>→</span>
+            </button>
+
+        </form>
+
+        <p class="switch-auth">
+            Already have an account?
+            <a href="{{ url_for('signin') }}">Sign in</a>
+        </p>
+
+        <p class="medical-note">
+            AI-based screening support • Not a medical diagnosis
+        </p>
+
+    </div>
+
+</div>
+
+<div class="auth-visual-section">
+
+    <div class="visual-shape shape-one"></div>
+    <div class="visual-shape shape-two"></div>
+
+    <div class="visual-content">
+
+        <div class="visual-badge">
+            ✦ Cervical Screening AI
+        </div>
+
+        <h2>
+            Understand the
+            <br>
+            <span>prediction.</span>
+        </h2>
+
+        <p>
+            CerviAI provides AI-assisted cervical screening
+            support through clinical risk analysis, cell image
+            classification, and transparent AI explanations.
+        </p>
+
+        <div class="visual-image">
+
+            <img
+                src="{{ url_for('static', filename='images/cervical_ai.png') }}"
+                alt="CerviAI cervical screening AI"
+            >
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</div>
+
+</body>
+</html>

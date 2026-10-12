@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+```
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>CerviAI | Image Analysis</title>
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='image_upload.css') }}">
+```
+
+</head>
+
+<body>
+
+<header class="navbar">
+
+```
+<a href="{{ url_for('choose') }}" class="logo">
+    <span class="logo-mark">✦</span>
+    Cervi<span>AI</span>
+</a>
+
+<div class="nav-right">
+
+    <a href="{{ url_for('choose') }}" class="home-link">
+        Dashboard
+    </a>
+
+    <a href="{{ url_for('logout') }}" class="logout-btn">
+        Logout
+    </a>
+
+</div>
+```
+
+</header>
+
+<main class="upload-page">
+
+```
+<div class="upload-container">
+
+    <div class="small-title">
+        CERVICAL CELL ANALYSIS
+    </div>
+
+    <h1>
+        Upload your
+        <span>image</span>
+    </h1>
+
+    <p class="subtitle">
+        Upload a cervical-cell image for AI-assisted
+        classification and visual explanation.
+    </p>
+
+
+    <form
+        id="uploadForm"
+        action="{{ url_for('predict_image') }}"
+        method="POST"
+        enctype="multipart/form-data"
+    >
+
+        <div class="upload-box">
+
+            <div class="upload-icon">
+                ◈
+            </div>
+
+            <h2>
+                Select a cervical-cell image
+            </h2>
+
+            <p>
+                Supported formats: BMP, JPG, JPEG and PNG
+            </p>
+
+            <input
+                type="file"
+                id="scan_image"
+                name="scan_image"
+                accept=".bmp,.jpg,.jpeg,.png"
+                required
+            >
+
+            <label
+                for="scan_image"
+                class="choose-file"
+            >
+                Choose Image
+            </label>
+
+            <p
+                id="file-name"
+                class="file-name"
+            >
+                No image selected
+            </p>
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="analyze-button"
+            id="analyzeButton"
+        >
+            Analyze Image
+            <span>→</span>
+        </button>
+
+    </form>
+
+
+    <p class="medical-note">
+        AI-based screening support • Not a medical diagnosis
+    </p>
+
+</div>
+```
+
+</main>
+
+<div
+    class="loading-screen"
+    id="loadingScreen"
+>
+
+```
+<div class="loader-box">
+
+    <div class="loader"></div>
+
+    <h2>
+        Analyzing Image
+    </h2>
+
+    <p>
+        Please wait while CerviAI analyzes the uploaded image.
+    </p>
+
+</div>
+```
+
+</div>
+
+<script>
+
+const form = document.getElementById("uploadForm");
+
+const loadingScreen =
+    document.getElementById("loadingScreen");
+
+const analyzeButton =
+    document.getElementById("analyzeButton");
+
+const imageInput =
+    document.getElementById("scan_image");
+
+const fileName =
+    document.getElementById("file-name");
+
+
+imageInput.addEventListener(
+    "change",
+    function() {
+
+        if (this.files.length > 0) {
+
+            fileName.textContent =
+                this.files[0].name;
+
+        } else {
+
+            fileName.textContent =
+                "No image selected";
+
+        }
+
+    }
+);
+
+
+form.addEventListener(
+    "submit",
+    function() {
+
+        loadingScreen.classList.add("active");
+
+        analyzeButton.disabled = true;
+
+    }
+);
+
+</script>
+
+</body>
+</html>

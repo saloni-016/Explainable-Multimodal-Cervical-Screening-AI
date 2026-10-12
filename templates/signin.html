@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+```
+<title>CerviAI | Sign In</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='signin.css') }}">
+```
+
+</head>
+
+<body class="auth-page">
+
+<header class="navbar">
+
+    <a href="/" class="logo">
+        <span class="logo-mark">✦</span>
+        Cervi<span>AI</span>
+    </a>
+
+
+   <div class="nav-right">
+    <a href="{{ url_for('home') }}" class="home-link">
+        Home
+    </a>
+</div>
+</header>
+
+<div class="auth-wrapper">
+
+```
+<section class="auth-form-section">
+
+    <div class="auth-form-content">
+
+        <div class="auth-small-title">
+            WELCOME BACK
+        </div>
+
+        <h1>
+            Sign in to
+            <span>CerviAI</span>
+        </h1>
+
+        <p class="auth-subtitle">
+            Welcome back to CerviAI. Sign in to continue
+            exploring AI-assisted cervical screening support.
+        </p>
+
+
+        {% if error %}
+
+        <div class="form-error">
+            {{ error }}
+        </div>
+
+        {% endif %}
+
+
+        <form method="POST" action="{{ url_for('signin') }}">
+
+            <div class="input-group">
+
+                <label for="email">
+                    Email Address
+                </label>
+
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Enter your email"
+                    required
+                >
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label for="password">
+                    Password
+                </label>
+
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    required
+                >
+
+            </div>
+
+
+            <button
+                type="submit"
+                class="auth-button"
+            >
+                Sign In
+                <span>→</span>
+            </button>
+
+        </form>
+
+
+        <div class="switch-auth">
+
+            Don't have an account?
+
+            <a href="{{ url_for('signup') }}">
+                Create an account
+            </a>
+
+        </div>
+
+
+        <div class="medical-note">
+            AI-based screening support • Not a medical diagnosis
+        </div>
+
+    </div>
+
+</section>
+```
+
+</div>
+
+</body>
+</html>

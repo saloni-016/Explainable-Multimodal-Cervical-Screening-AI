@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CerviAI | Explainable Cervical Screening</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <a href="/" class="logo">
+        <span class="logo-mark">✦</span>
+        Cervi<span>AI</span>
+    </a>
+
+
+    <div class="nav-right">
+        <a href="/signin" class="signin">Sign In</a>
+        <a href="/signup" class="nav-btn">Sign up</a>
+    </div>
+
+</header>
+
+
+<main>
+
+<section class="hero" id="home">
+
+    <div class="hero-left">
+
+        <div class="eyebrow">
+            <span>✦</span>
+            Explainable AI
+            <span>•</span>
+            Cervical Screening
+        </div>
+
+        <h1>
+            Explainable AI for
+            <span>Cervical Screening</span>
+        </h1>
+
+        <p class="hero-text">
+            AI-assisted screening support that combines clinical
+            information and cervical-cell image analysis with
+            explainable AI.
+        </p>
+
+        <div class="hero-buttons">
+
+            <a href="/signup" class="primary-btn">
+                Get Started
+                <span>→</span>
+            </a>
+
+            <a href="#how-it-works" class="outline-btn">
+                How It Works
+                <span>→</span>
+            </a>
+
+        </div>
+
+        <p class="disclaimer">
+            AI-based screening support • Not a medical diagnosis
+        </p>
+
+    </div>
+
+
+    <div class="hero-right">
+
+        <div class="purple-glow"></div>
+
+        
+
+        <div class="doctor-image-container">
+
+            <img
+                src="{{ url_for('static', filename='images/ai_doctor.png') }}"
+                alt="AI Doctor"
+                class="ai-doctor"
+            >
+
+
+    </div>
+
+</section>
+
+
+<section class="approach" id="about">
+
+    <div class="section-title">
+
+        <span>OUR APPROACH</span>
+
+        <h2>
+            AI that doesn't just predict.
+            <strong>It explains.</strong>
+        </h2>
+
+        <p>
+            Our system combines multiple AI techniques to provide
+            screening support while making model predictions easier
+            to understand.
+        </p>
+
+    </div>
+
+
+    <div class="feature-grid">
+
+        <div class="feature-card">
+
+            <div class="feature-top">
+                <span class="feature-number">01</span>
+                <span class="feature-icon">↗</span>
+            </div>
+
+            <h3>Clinical AI</h3>
+
+            <p>
+                XGBoost analyzes clinical risk factors and provides
+                a probability-based screening result.
+            </p>
+
+            <span class="technology">
+                XGBoost + SHAP
+            </span>
+
+        </div>
+
+
+        <div class="feature-card">
+
+            <div class="feature-top">
+                <span class="feature-number">02</span>
+                <span class="feature-icon">▣</span>
+            </div>
+
+            <h3>Cell Image AI</h3>
+
+            <p>
+                A Vision Transformer analyzes cervical-cell images
+                and identifies the predicted cell type.
+            </p>
+
+            <span class="technology">
+                PyTorch + ViT
+            </span>
+
+        </div>
+
+
+        <div class="feature-card">
+
+            <div class="feature-top">
+                <span class="feature-number">03</span>
+                <span class="feature-icon">✦</span>
+            </div>
+
+            <h3>Explainable AI</h3>
+
+            <p>
+                SHAP explanations and image heatmaps show which
+                factors and image regions influenced the prediction.
+            </p>
+
+            <span class="technology">
+                SHAP + Visual Explanation
+            </span>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="workflow" id="how-it-works">
+
+    <div class="section-title">
+
+        <span>HOW IT WORKS</span>
+
+        <h2>From input to explanation</h2>
+
+        <p>
+            A simple three-step process for AI-assisted
+            cervical screening support.
+        </p>
+
+    </div>
+
+
+    <div class="workflow-grid">
+
+        <div class="workflow-step">
+
+            <div class="step-number">
+                01
+            </div>
+
+            <h3>Provide Information</h3>
+
+            <p>
+                Enter clinical information or upload a
+                cervical-cell image.
+            </p>
+
+        </div>
+
+
+        <div class="arrow">
+            →
+        </div>
+
+
+        <div class="workflow-step">
+
+            <div class="step-number">
+                02
+            </div>
+
+            <h3>AI Analysis</h3>
+
+            <p>
+                XGBoost or Vision Transformer processes
+                the provided information.
+            </p>
+
+        </div>
+
+
+        <div class="arrow">
+            →
+        </div>
+
+
+        <div class="workflow-step">
+
+            <div class="step-number">
+                03
+            </div>
+
+            <h3>Understand the Result</h3>
+
+            <p>
+                View the prediction together with an
+                explanation of what influenced it.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="cta">
+
+    <div>
+
+        <span>GET STARTED</span>
+
+        <h2>
+            Understand the prediction,
+            not just the result.
+        </h2>
+
+        <p>
+            Explore AI-assisted clinical and cervical-cell
+            image screening support with explainable results.
+        </p>
+
+        <a href="/signup" class="primary-btn">
+            Get Started
+            <span>→</span>
+        </a>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<footer>
+
+    <div class="footer-brand">
+
+        <span class="logo-mark">✦</span>
+
+        Cervi<span>AI</span>
+
+    </div>
+
+    <p>
+        Explainable Multimodal Cervical Screening AI
+    </p>
+
+    <small>
+        This system provides AI-based screening support and is not
+        a substitute for professional medical diagnosis.
+    </small>
+
+</footer>
+
+</body>
+</html>

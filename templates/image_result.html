@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>CerviAI | Analysis Result</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='image_result.css') }}">
+
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <a href="{{ url_for('choose') }}" class="logo">
+        <span class="logo-mark">✦</span>
+        Cervi<span>AI</span>
+    </a>
+
+    <div class="nav-right">
+
+        <a href="{{ url_for('choose') }}"
+           class="home-link">
+            Dashboard
+        </a>
+
+        <a href="{{ url_for('logout') }}"
+           class="logout-btn">
+            Logout
+        </a>
+
+    </div>
+
+</header>
+
+
+<main class="result-page">
+
+    <div class="result-container">
+
+        <div class="small-title">
+            CERVICAL CELL ANALYSIS
+        </div>
+
+        <h1>
+            Image Analysis <span>Result</span>
+        </h1>
+
+        <p class="subtitle">
+            CerviAI has analyzed the uploaded cervical-cell image.
+        </p>
+
+
+        <section class="result-grid">
+
+
+            <div class="image-card">
+
+                <h2>
+                    Uploaded Image
+                </h2>
+
+                <div class="image-wrapper">
+
+                    <img
+                        src="{{ url_for(
+                            'static',
+                            filename='uploads/' + image_file
+                        ) }}"
+                        alt="Uploaded cervical-cell image"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="prediction-card">
+
+                <div class="card-title">
+                    AI PREDICTION
+                </div>
+
+                <h2>
+                    {{ class_name }}
+                </h2>
+
+                <div class="confidence-label">
+                    Confidence
+                </div>
+
+                <div class="confidence">
+                    {{ confidence }}%
+                </div>
+
+                <div class="confidence-bar">
+
+                    <div
+                        class="confidence-fill"
+                        style="width: {{ confidence }}%;"
+                    ></div>
+
+                </div>
+
+                <p>
+                    The uploaded image was classified
+                    based on the visual characteristics
+                    identified by the AI system.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <section class="explanation-section">
+
+            <div class="small-title">
+                EXPLAINABLE AI
+            </div>
+
+            <h2>
+                Why did the AI make
+                <span>this prediction?</span>
+            </h2>
+
+            <div class="explanation-grid">
+
+
+                <div class="heatmap-card">
+
+                    <h3>
+                        Visual Explanation
+                    </h3>
+
+                    <img
+                        src="{{ url_for(
+                            'static',
+                            filename='explanations/' + explanation_image
+                        ) }}"
+                        alt="AI explanation heatmap"
+                    >
+
+                    <p>
+                        The highlighted regions show the areas
+                        that contributed to the prediction.
+                    </p>
+
+                </div>
+
+
+                <div class="analysis-card">
+
+                    <h3>
+                        Analysis
+                    </h3>
+
+                    {% for item in explanation %}
+
+                    <div class="analysis-item">
+
+                        <span class="analysis-icon">
+                            ✓
+                        </span>
+
+                        <p>
+                            {{ item }}
+                        </p>
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <div class="result-actions">
+
+            <a
+                href="{{ url_for('image_upload') }}"
+                class="primary-button"
+            >
+                Analyze Another Image
+                <span>→</span>
+            </a>
+
+            <a
+                href="{{ url_for('choose') }}"
+                class="secondary-button"
+            >
+                Back to Dashboard
+            </a>
+
+        </div>
+
+
+        <p class="medical-note">
+            AI-based screening support • Not a medical diagnosis
+        </p>
+
+    </div>
+
+</main>
+
+</body>
+</html>
