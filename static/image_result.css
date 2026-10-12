@@ -1,0 +1,288 @@
+
+
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #faf8fc;
+    color: #29252e;
+}
+
+.navbar {
+    height: 72px;
+    padding: 0 7%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border-bottom: 1px solid #eee8f2;
+}
+
+.logo {
+    text-decoration: none;
+    color: #29252e;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.logo span:last-child {
+    color: #74439b;
+}
+
+.logo-mark {
+    color: #74439b;
+    margin-right: 5px;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+}
+
+.home-link,
+.logout-btn {
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.home-link {
+    color: #29252e;
+}
+
+.home-link:hover {
+    color: #74439b;
+}
+
+.logout-btn {
+    color: #74439b;
+}
+
+.result-page {
+    padding: 60px 7%;
+}
+
+.result-container {
+    max-width: 1100px;
+    margin: auto;
+}
+
+.small-title {
+    color: #74439b;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 0;
+}
+
+h1 span,
+h2 span {
+    color: #74439b;
+}
+
+.subtitle {
+    color: #756d7d;
+    margin-top: 12px;
+    margin-bottom: 40px;
+}
+
+.result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.image-card,
+.prediction-card,
+.heatmap-card,
+.analysis-card {
+    background: white;
+    border: 1px solid #eee8f2;
+    border-radius: 18px;
+    padding: 28px;
+}
+
+.image-card h2 {
+    margin-top: 0;
+}
+
+.image-wrapper {
+    margin-top: 20px;
+    width: 100%;
+    height: 350px;
+    background: #f5f1f8;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.prediction-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.card-title {
+    color: #74439b;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.prediction-card h2 {
+    font-size: 32px;
+    margin: 12px 0 28px;
+    color: #29252e;
+}
+
+.confidence-label {
+    font-size: 13px;
+    color: #756d7d;
+    margin-bottom: 5px;
+}
+
+.confidence {
+    font-size: 32px;
+    font-weight: 700;
+    color: #74439b;
+}
+
+.confidence-bar {
+    height: 8px;
+    background: #eee8f2;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 14px 0 25px;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: #74439b;
+    border-radius: 10px;
+}
+
+.prediction-card p,
+.heatmap-card p {
+    color: #756d7d;
+    line-height: 1.6;
+}
+
+.explanation-section {
+    margin-top: 50px;
+}
+
+.explanation-section h2 {
+    font-size: 30px;
+    margin-top: 0;
+    margin-bottom: 25px;
+}
+
+.explanation-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.heatmap-card h3,
+.analysis-card h3 {
+    margin-top: 0;
+    font-size: 20px;
+}
+
+.heatmap-card img {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    border-radius: 12px;
+    background: #f5f1f8;
+}
+
+.analysis-item {
+    display: flex;
+    gap: 12px;
+    border-bottom: 1px solid #eee8f2;
+    padding: 15px 0;
+}
+
+.analysis-item:last-child {
+    border-bottom: none;
+}
+
+.analysis-icon {
+    color: #74439b;
+    font-weight: bold;
+}
+
+.analysis-item p {
+    margin: 0;
+    color: #5f5868;
+    line-height: 1.6;
+}
+
+.result-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 35px;
+}
+
+.primary-button,
+.secondary-button {
+    padding: 14px 22px;
+    border-radius: 9px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.primary-button {
+    background: #74439b;
+    color: white;
+}
+
+.secondary-button {
+    background: white;
+    color: #74439b;
+    border: 1px solid #74439b;
+}
+
+.medical-note {
+    text-align: center;
+    margin-top: 40px;
+    color: #8b8392;
+    font-size: 12px;
+}
+
+@media (max-width: 800px) {
+
+    .result-grid,
+    .explanation-grid {
+        grid-template-columns: 1fr;
+    }
+
+    h1 {
+        font-size: 32px;
+    }
+
+    .result-actions {
+        flex-direction: column;
+    }
+
+}
