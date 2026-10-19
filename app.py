@@ -1,27 +1,28 @@
+
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import joblib
 import sqlite3
 from datetime import datetime
 import os
-import json
-import torch
 import numpy as np
-import matplotlib.pyplot as plt
+import uuid
+
 from dotenv import load_dotenv
 from groq import Groq
-from PIL import Image
-from torchvision import transforms
-from torchvision.models import vit_b_16
-import uuid
+from werkzeug.utils import secure_filename
+
 from explain_xgboost import (
     explain_clinical_input,
     create_clinical_explanation
 )
+from explain_vit import explain_image
+
 load_dotenv()
 
 client = Groq(
     api_key=os.getenv("GROQ_API_KEY")
 )
+
 def make_json_safe(value):
     if isinstance(value, np.ndarray):
         return value.tolist()
@@ -54,41 +55,6 @@ os.makedirs(EXPLANATION_FOLDER, exist_ok=True)
 model = joblib.load("model.pkl")
 imputer = joblib.load("imputer.pkl")
 
-MODEL_PATH = "vit_sipakmed.pth"
-CLASSES_PATH = "sipakmed_classes.json"
-
-device = torch.device(
-    "cuda" if torch.cuda.is_available() else "cpu"
-)
-
-with open(CLASSES_PATH, "r") as f:
-    classes = json.load(f)
-
-vit_model = vit_b_16()
-
-vit_model.heads.head = torch.nn.Linear(
-    vit_model.heads.head.in_features,
-    len(classes)
-)
-
-vit_model.load_state_dict(
-    torch.load(
-        MODEL_PATH,
-        map_location=device
-    )
-)
-
-vit_model = vit_model.to(device)
-vit_model.eval()
-
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
-])
 
 
 def init_db():
@@ -120,264 +86,6 @@ def init_db():
 
 
 init_db()
-def generate_vit_explanation(image_path, explanation_filename):
-
-    image = Image.open(image_path).convert("RGB")
-    image = image.resize((224, 224))
-
-    original_tensor = transform(image).unsqueeze(0).to(device)
-
-    with torch.no_grad():
-
-        output = vit_model(original_tensor)
-
-        probabilities = torch.softmax(
-            output,
-            dim=1
-        )
-
-        predicted_index = probabilities.argmax(
-            dim=1
-        ).item()
-
-        confidence = probabilities[
-            0,
-            predicted_index
-        ].item()
-    # Scores for all five cell categories
-    category_labels = [
-        name.replace("im_", "").replace("_", " ")
-        for name in classes
-    ]
-
-    category_scores = (
-    probabilities[0].cpu().numpy() * 100
-).round(2).tolist()
-    class_name = classes[
-        predicted_index
-    ].replace("im_", "")
-
-    grid_size = 7
-    patch_size = 32
-
-    occluded_images = []
-
-    for row in range(grid_size):
-
-        for col in range(grid_size):
-
-            occluded_image = image.copy()
-
-            pixels = occluded_image.load()
-
-            start_x = col * patch_size
-            start_y = row * patch_size
-
-            for y in range(
-                start_y,
-                min(start_y + patch_size, 224)
-            ):
-
-                for x in range(
-                    start_x,
-                    min(start_x + patch_size, 224)
-                ):
-
-                    pixels[x, y] = (0, 0, 0)
-
-            occluded_images.append(
-                transform(occluded_image)
-            )
-
-    importance_map = np.zeros(
-        (grid_size, grid_size)
-    )
-
-    batch_size = 32
-
-    for start in range(
-        0,
-        len(occluded_images),
-        batch_size
-    ):
-
-        batch = torch.stack(
-            occluded_images[
-                start:start + batch_size
-            ]
-        ).to(device)
-
-        with torch.no_grad():
-
-            outputs = vit_model(batch)
-
-            probabilities = torch.softmax(
-                outputs,
-                dim=1
-            )
-
-            new_confidences = probabilities[
-                :,
-                predicted_index
-            ].cpu().numpy()
-
-        for i, new_confidence in enumerate(
-            new_confidences
-        ):
-
-            patch_index = start + i
-
-            row = patch_index // grid_size
-            col = patch_index % grid_size
-
-            importance_map[
-                row,
-                col
-            ] = (
-                confidence -
-                new_confidence
-            )
-
-    positive_map = np.maximum(
-        importance_map,
-        0
-    )
-    # Check whether the heatmap has meaningful highlighted regions
-    max_influence = float(positive_map.max())
-
-    if max_influence < 0.01:
-        heatmap_message = (
-            "No strongly influential region was highlighted "
-            "by the AI in this image. This does not confirm "
-            "that the image is normal or that cancer risk is low. "
-            "Please consult a healthcare professional for a "
-            "reliable assessment."
-        )
-    else:
-        heatmap_message = (
-        "The heatmap highlights regions that influenced "
-        "the AI prediction. These highlights do not confirm "
-        "cancer or indicate personal cancer risk."
-    )
-
-    if positive_map.max() > 0:
-
-        normalized_map = (
-            positive_map /
-            positive_map.max()
-        )
-
-    else:
-
-        normalized_map = positive_map
-
-    heatmap = Image.fromarray(
-        np.uint8(
-            normalized_map * 255
-        )
-    )
-
-    heatmap = heatmap.resize(
-        (224, 224),
-        Image.Resampling.BILINEAR
-    )
-
-    heatmap_array = np.array(
-        heatmap
-    )
-
-    plt.figure(
-        figsize=(8, 8)
-    )
-
-    plt.imshow(image)
-
-    plt.imshow(
-        heatmap_array,
-        alpha=0.5,
-        cmap="jet"
-    )
-
-    plt.axis("off")
-
-    plt.title(
-        f"Prediction: {class_name} "
-        f"({confidence * 100:.2f}%)"
-    )
-
-    explanation_path = os.path.join(
-        EXPLANATION_FOLDER,
-        explanation_filename
-    )
-
-    plt.savefig(
-        explanation_path,
-        bbox_inches="tight",
-        pad_inches=0
-    )
-
-    plt.close()
-
-    max_position = np.unravel_index(
-        np.argmax(positive_map),
-        positive_map.shape
-    )
-
-    row = max_position[0]
-    col = max_position[1]
-
-    if row < 2:
-        vertical = "upper"
-    elif row < 5:
-        vertical = "central"
-    else:
-        vertical = "lower"
-
-    if col < 2:
-        horizontal = "left"
-    elif col < 5:
-        horizontal = "central"
-    else:
-        horizontal = "right"
-
-    important_region = (
-        f"{vertical}-{horizontal}"
-    )
-
-    explanation = [
-
-        f"The uploaded image was classified "
-        f"as {class_name} with "
-        f"{confidence * 100:.2f}% confidence.",
-
-        "The heatmap highlights the regions "
-        "that contributed to the prediction.",
-
-        f"The strongest contributing region "
-        f"was the {important_region} area.",
-
-        "The highlighted regions show which "
-        "visual areas influenced the AI prediction."
-    ]
-
-    return {
-
-        "class_name": class_name,
-
-        "confidence": round(
-            confidence * 100,
-            2
-        ),
-
-        "explanation": explanation,
-
-        "explanation_image":
-        explanation_filename,
-        "heatmap_message": heatmap_message
-    }
-
-
-
 
 
 @app.route("/")
@@ -542,6 +250,13 @@ def choose():
     return render_template(
         "choose.html"
     )
+
+@app.route("/combined_assessment")
+def combined_assessment():
+    if "email" not in session:
+        return redirect(url_for("signin"))
+
+    return render_template("combined_assessment.html")
 
 
 @app.route("/details")
@@ -786,99 +501,243 @@ def result():
 
 
 
-@app.route(
-    "/predict_image",
-    methods=["POST"]
-)
-def predict_image():
-
+@app.route("/predict_combined", methods=["POST"])
+def predict_combined():
     if "email" not in session:
+        return redirect(url_for("signin"))
 
-        return redirect(
-            url_for("signin")
-        )
+    field_names = [
+        "Age",
+        "Number_of_sexual_partners",
+        "First_sexual_intercourse",
+        "Smokes",
+        "Smokes_years",
+        "Hormonal_Contraceptives",
+        "IUD",
+        "STDs",
+        "STDs_number",
+        "Dx_Cancer",
+        "Dx_CIN",
+        "Dx_HPV"
+    ]
 
-    image = request.files.get(
-        "scan_image"
-    )
+    try:
+        values = []
+        for field in field_names:
+            raw_value = request.form.get(field, "").strip()
+            if raw_value == "":
+                return "Please complete all clinical fields.", 400
+            values.append(float(raw_value))
+    except ValueError:
+        return "Please enter valid numeric clinical values.", 400
 
-    if image is None:
+    image = request.files.get("scan_image")
+    if image is None or image.filename == "":
+        return "Please select a cervical-cell image.", 400
 
-        return "No image uploaded"
-
-    if image.filename == "":
-
-        return "No image selected"
-
-    allowed_extensions = {
-        ".bmp",
-        ".png",
-        ".jpg",
-        ".jpeg"
-    }
-
-    extension = os.path.splitext(
-        image.filename
-    )[1].lower()
+    original_filename = secure_filename(image.filename)
+    extension = os.path.splitext(original_filename)[1].lower()
+    allowed_extensions = {".bmp", ".png", ".jpg", ".jpeg"}
 
     if extension not in allowed_extensions:
+        return "Use a BMP, PNG, JPG, or JPEG image.", 400
 
-        return (
-            "Please upload a BMP, PNG, JPG "
-            "or JPEG cervical-cell image."
+    try:
+        clinical_output = explain_clinical_input(values)
+        clinical_explanation = create_clinical_explanation(
+            clinical_output
         )
+        probability = float(clinical_output["probability"])
 
-    timestamp = datetime.now().strftime(
-        "%Y%m%d%H%M%S%f"
+        if probability >= 70:
+            clinical_level = "High Risk"
+        elif probability >= 40:
+            clinical_level = "Medium Risk"
+        else:
+            clinical_level = "Low Risk"
+
+        clinical_explanations = clinical_output.get("explanations", [])
+
+        factors = [
+    {
+        "name": item["feature"],
+        "value": item["value"],
+        "influence": item["influence"],
+        "direction": item["direction"]
+    }
+    for item in clinical_explanations
+]
+    except Exception:
+        app.logger.exception("Clinical model failed")
+        return "Clinical assessment failed. Check the Flask terminal.", 500
+
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    image_filename = f"combined_{timestamp}{extension}"
+    explanation_filename = f"combined_explanation_{timestamp}.png"
+
+    image_path = os.path.join(UPLOAD_FOLDER, image_filename)
+    heatmap_file_path = os.path.join(
+        EXPLANATION_FOLDER, explanation_filename
     )
 
-    image_filename = (
-        timestamp +
-        extension
+    try:
+        image.save(image_path)
+        image_output = explain_image(image_path, heatmap_file_path)
+    except Exception:
+        app.logger.exception("ViT image explanation failed")
+        return "Image analysis failed. Check the Flask terminal.", 500
+
+    session["last_combined_result"] = make_json_safe({
+        "clinical": {
+            "risk_level": clinical_level,
+            "prob_percent": round(probability, 2),
+            "explanations": clinical_explanations,
+            "factors": factors,
+            "explanation_text": clinical_explanation
+        },
+        "image": {
+            "image_file": image_filename,
+            "class_name": image_output["predicted_cell_type"],
+            "confidence": image_output.get("confidence"),
+            "abnormality_score": image_output["abnormality_score"],
+            "risk_indicator": image_output["risk_indicator"],
+            "recommendation": image_output["recommendation"],
+            "explained_target": image_output["explained_target"],
+            "top_regions": image_output["top_regions"],
+            "explanation_image": explanation_filename,
+            "heatmap_message": (
+                "The heatmap shows image regions influencing the model. "
+                "It does not confirm cancer or personal cancer risk."
+            ),
+            "explanation": [
+                f"Predicted cell category: "
+                f"{image_output['predicted_cell_type']}.",
+                image_output["recommendation"]
+            ],
+            "disclaimer": image_output["disclaimer"]
+        }
+    })
+
+    try:
+        conn = sqlite3.connect("database.db")
+        conn.execute(
+            """
+            INSERT INTO results (email, risk_level, probability, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                session["email"],
+                clinical_level,
+                round(probability, 2),
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        app.logger.exception("Could not save combined assessment")
+
+    return redirect(url_for("combined_result"))
+
+
+@app.route("/combined_result")
+def combined_result():
+    if "email" not in session:
+        return redirect(url_for("signin"))
+
+    combined = session.get("last_combined_result")
+
+    if not combined:
+        return redirect(url_for("combined_assessment"))
+
+    clinical = combined.get("clinical", {})
+    image = combined.get("image", {})
+
+    image_path = url_for(
+        "static",
+        filename="uploads/" + image.get("image_file", "")
     )
 
-    image_path = os.path.join(
-        app.config["UPLOAD_FOLDER"],
-        image_filename
+    heatmap_path = url_for(
+        "static",
+        filename="explanations/" + image.get("explanation_image", "")
     )
 
-    image.save(
-        image_path
+    return render_template(
+        "combined_result.html",
+        clinical=clinical,
+        image=image,
+        image_path=image_path,
+        heatmap_path=heatmap_path
     )
 
-    explanation_filename = (
-        "explanation_" +
-        timestamp +
-        ".png"
+
+
+@app.route("/predict_image", methods=["POST"])
+def predict_image():
+    if "email" not in session:
+        return redirect(url_for("signin"))
+
+    image = request.files.get("scan_image")
+
+    if image is None or image.filename == "":
+        return "Please select an image to upload.", 400
+
+    original_filename = secure_filename(image.filename)
+    extension = os.path.splitext(original_filename)[1].lower()
+
+    if extension not in {".bmp", ".png", ".jpg", ".jpeg"}:
+        return "Please upload a BMP, PNG, JPG, or JPEG image.", 400
+
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    image_filename = f"{timestamp}{extension}"
+    explanation_filename = f"explanation_{timestamp}.png"
+
+    image_path = os.path.join(UPLOAD_FOLDER, image_filename)
+    heatmap_file_path = os.path.join(
+        EXPLANATION_FOLDER, explanation_filename
     )
 
-    result = generate_vit_explanation(
-        image_path,
-        explanation_filename
-    )
+    try:
+        image.save(image_path)
+        result = explain_image(image_path, heatmap_file_path)
 
-    session["last_image_result"] = {
-    "image_file": image_filename,
-    "class_name": result["class_name"],
-    "confidence": result["confidence"],
-    "explanation": result["explanation"],
-    "explanation_image": result["explanation_image"],
-    "heatmap_message": result["heatmap_message"],
-}
+        session["last_image_result"] = make_json_safe({
+            "image_file": image_filename,
+            "explanation_image": explanation_filename,
+            "predicted_cell_type": result["predicted_cell_type"],
+            "class_name": result["predicted_cell_type"],
+            "confidence": result.get("confidence"),
+            "abnormality_score": result["abnormality_score"],
+            "risk_indicator": result["risk_indicator"],
+            "recommendation": result["recommendation"],
+            "explained_target": result["explained_target"],
+            "top_regions": result["top_regions"],
+            "disclaimer": result["disclaimer"],
+            "heatmap_message": (
+                "The heatmap shows regions that influenced the model output. "
+                "It does not identify confirmed abnormal tissue."
+            ),
+            "explanation": [
+                f"Predicted cell category: "
+                f"{result['predicted_cell_type']}.",
+                result["recommendation"]
+            ]
+        })
+    except Exception:
+        app.logger.exception("Image analysis failed")
+        return "Image analysis failed. Check the Flask terminal.", 500
 
-    return redirect(
-        url_for("image_result")
-    )
+    return redirect(url_for("image_result"))
+
 
 
 @app.route("/image_result")
 def image_result():
-
     if "email" not in session:
         return redirect(url_for("signin"))
 
     data = session.get("last_image_result")
-
     if not data:
         return redirect(url_for("image_upload"))
 
@@ -886,23 +745,41 @@ def image_result():
         "static",
         filename="uploads/" + data["image_file"]
     )
-
     heatmap_path = url_for(
         "static",
         filename="explanations/" + data["explanation_image"]
     )
 
+    risk = str(data.get("risk_indicator", "Unavailable")).strip().lower()
+
+    # Display Medium instead of Moderate.
+    if risk == "moderate":
+        risk = "medium"
+
+    if risk not in ("low", "medium", "high"):
+        risk = "unavailable"
+
     return render_template(
         "image_result.html",
-        predicted_class=data.get("class_name", "Prediction unavailable"),
-        confidence=data.get("confidence"),
+        risk_indicator=risk,
+        predicted_cell_type=data.get(
+            "predicted_cell_type", "Unavailable"
+        ),
+        abnormality_score=data.get("abnormality_score", 0),
         image_path=image_path,
         heatmap_path=heatmap_path,
-        heatmap_message=data.get(
-            "heatmap_message",
-            "Highlighted regions show image areas that influenced the AI prediction. They do not indicate personal cancer risk."
+        top_regions=data.get("top_regions", []),
+        explained_target=data.get("explained_target", ""),
+        recommendation=(
+            "The result shows cell patterns that may require further "
+            "evaluation for cervical abnormalities. Please consult a "
+            "qualified healthcare professional for appropriate screening "
+            "and testing."
         ),
-        explanation=data.get("explanation", [])
+        disclaimer=data.get(
+            "disclaimer",
+            "Educational screening support only. This is not a diagnosis."
+        )
     )
 
 
