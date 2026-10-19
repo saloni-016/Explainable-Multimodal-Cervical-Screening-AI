@@ -1,301 +1,159 @@
+"""
+Occlusion-based explanation for the abnormality / risk indicator.
 
-import json
-import torch
+Shows which regions of the cell image drive the result. This is a screening
+aid only. It is NOT a cancer diagnosis.
+
+Requires predict_risk.py and sipakmed_risk_config.json in the same folder.
+"""
+
 import numpy as np
+import torch
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from PIL import Image
-from torchvision import transforms
-from torchvision.models import vit_b_16
+from PIL import Image, ImageDraw
 
-MODEL_PATH = "vit_sipakmed.pth"
-CLASSES_PATH = "sipakmed_classes.json"
-
-device = torch.device(
-    "cuda" if torch.cuda.is_available() else "cpu"
+from train_vit import (
+    model,
+    transform,
+    DEVICE,
+    CLASSES,
+    ABNORMAL_IDX,
+    FLAG_THRESHOLD,
+    risk_level,
+    RECOMMENDATION,
 )
+from train_vit import DISCLAIMER
 
-with open(CLASSES_PATH, "r") as f:
-    classes = json.load(f)
+GRID_SIZE = 14      # 14 x 14 patches for a 224 x 224 ViT-B/16 input
+PATCH_SIZE = 16
+BATCH_SIZE = 32
 
-model = vit_b_16()
+# 3 x 3 region layout over the 14 x 14 grid
+ROW_BOUNDS = [(0, 5), (5, 10), (10, 14)]
+COL_BOUNDS = [(0, 5), (5, 10), (10, 14)]
+REGION_NAMES = [
+    ["Upper-left region", "Upper-central region", "Upper-right region"],
+    ["Middle-left region", "Central region", "Middle-right region"],
+    ["Lower-left region", "Lower-central region", "Lower-right region"],
+]
 
-model.heads.head = torch.nn.Linear(
-    model.heads.head.in_features,
-    len(classes)
-)
 
-model.load_state_dict(
-    torch.load(
-        MODEL_PATH,
-        map_location=device
-    )
-)
-
-model = model.to(device)
-model.eval()
-
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
-])
+def get_probabilities(images):
+    """Softmax probabilities for a list of PIL images (batched)."""
+    outputs = []
+    for start in range(0, len(images), BATCH_SIZE):
+        chunk = images[start:start + BATCH_SIZE]
+        batch = torch.stack([transform(img) for img in chunk]).to(DEVICE)
+        with torch.no_grad():
+            probs = torch.softmax(model(batch), dim=1).cpu().numpy()
+        outputs.append(probs)
+    return np.concatenate(outputs)
 
 
 def explain_image(image_path, output_path):
+    image = Image.open(image_path).convert("RGB").resize((224, 224))
 
-    image = Image.open(
-        image_path
-    ).convert("RGB")
+    base_probs = get_probabilities([image])[0]
+    predicted_index = int(base_probs.argmax())
+    abnormality_score = float(base_probs[ABNORMAL_IDX].sum())
+    level = risk_level(abnormality_score)
 
-    image = image.resize((224, 224))
+    # Explain the abnormality score when the image is flagged;
+    # otherwise explain the predicted (normal/benign) cell type.
+    if abnormality_score >= FLAG_THRESHOLD:
+        target_indices = ABNORMAL_IDX
+        explained_target = "abnormality score"
+    else:
+        target_indices = [predicted_index]
+        explained_target = CLASSES[predicted_index].replace("im_", "")
 
-    original_tensor = transform(
-        image
-    ).unsqueeze(0).to(device)
+    base_value = float(base_probs[target_indices].sum())
 
-    with torch.no_grad():
-
-        original_output = model(
-            original_tensor
-        )
-
-        original_probabilities = torch.softmax(
-            original_output,
-            dim=1
-        )
-
-        predicted_index = (
-            original_probabilities
-            .argmax(dim=1)
-            .item()
-        )
-
-        original_confidence = (
-            original_probabilities[
-                0,
-                predicted_index
-            ].item()
-        )
-
-    grid_size = 14
-    patch_size = 16
-
-    importance_map = np.zeros(
-        (grid_size, grid_size)
-    )
-
-    for row in range(grid_size):
-
-        for col in range(grid_size):
-
-            occluded_image = image.copy()
-
-            pixels = occluded_image.load()
-
-            start_x = col * patch_size
-            start_y = row * patch_size
-
-            for y in range(
-                start_y,
-                start_y + patch_size
-            ):
-
-                for x in range(
-                    start_x,
-                    start_x + patch_size
-                ):
-
-                    pixels[x, y] = (
-                        0,
-                        0,
-                        0
-                    )
-
-            occluded_tensor = transform(
-                occluded_image
-            ).unsqueeze(0).to(device)
-
-            with torch.no_grad():
-
-                output = model(
-                    occluded_tensor
-                )
-
-                probabilities = torch.softmax(
-                    output,
-                    dim=1
-                )
-
-                new_confidence = (
-                    probabilities[
-                        0,
-                        predicted_index
-                    ].item()
-                )
-
-            importance_map[
-                row,
-                col
-            ] = (
-                original_confidence
-                - new_confidence
+    # Occlude each patch and measure the drop in the target value
+    occluded_images = []
+    for row in range(GRID_SIZE):
+        for col in range(GRID_SIZE):
+            occluded = image.copy()
+            x0, y0 = col * PATCH_SIZE, row * PATCH_SIZE
+            ImageDraw.Draw(occluded).rectangle(
+                [x0, y0, x0 + PATCH_SIZE - 1, y0 + PATCH_SIZE - 1],
+                fill=(0, 0, 0),
             )
+            occluded_images.append(occluded)
 
-    positive_map = np.maximum(
-        importance_map,
-        0
+    occluded_probs = get_probabilities(occluded_images)
+    occluded_values = occluded_probs[:, target_indices].sum(axis=1)
+
+    importance_map = (base_value - occluded_values).reshape(
+        GRID_SIZE, GRID_SIZE
     )
 
-    total_contribution = positive_map.sum()
+    positive_map = np.maximum(importance_map, 0)
+    total = positive_map.sum()
 
-    if total_contribution > 0:
-
-        contribution_map = (
-            positive_map
-            / total_contribution
-        ) * 100
-
-    else:
-
-        contribution_map = np.zeros_like(
-            positive_map
-        )
-
-    if positive_map.max() > 0:
-
-        normalized_map = (
-            positive_map
-            / positive_map.max()
-        )
-
-    else:
-
-        normalized_map = positive_map
-
-    heatmap = Image.fromarray(
-        np.uint8(
-            normalized_map * 255
-        )
+    contribution_map = (
+        positive_map / total * 100 if total > 0 else np.zeros_like(positive_map)
+    )
+    normalized_map = (
+        positive_map / positive_map.max()
+        if positive_map.max() > 0
+        else positive_map
     )
 
-    heatmap = heatmap.resize(
-        (224, 224),
-        Image.Resampling.BILINEAR
-    )
-
-    heatmap_array = np.array(
-        heatmap
+    heatmap = Image.fromarray(np.uint8(normalized_map * 255)).resize(
+        (224, 224), Image.Resampling.BILINEAR
     )
 
     plt.figure(figsize=(8, 8))
-
     plt.imshow(image)
-
-    plt.imshow(
-        heatmap_array,
-        alpha=0.5,
-        cmap="jet"
-    )
-
+    plt.imshow(np.array(heatmap), alpha=0.5, cmap="jet")
     plt.axis("off")
-
-    class_name = classes[
-        predicted_index
-    ].replace("im_", "")
-
-    confidence_percentage = (
-        original_confidence * 100
-    )
-
     plt.title(
-        f"ViT Explanation: "
-        f"{class_name} "
-        f"({confidence_percentage:.2f}%)"
+        f"Risk indicator: {level} "
+        f"(abnormality score {abnormality_score * 100:.1f}%)"
     )
-
-    plt.savefig(
-        output_path,
-        bbox_inches="tight",
-        pad_inches=0
-    )
-
+    plt.savefig(output_path, bbox_inches="tight", pad_inches=0)
     plt.close()
 
-    regions = {
-
-        "Upper-left region":
-            contribution_map[
-                0:5,
-                0:5
-            ].sum(),
-
-        "Upper-central region":
-            contribution_map[
-                0:5,
-                5:10
-            ].sum(),
-
-        "Upper-right region":
-            contribution_map[
-                0:5,
-                10:14
-            ].sum(),
-
-        "Central region":
-            contribution_map[
-                5:10,
-                5:10
-            ].sum(),
-
-        "Lower-left region":
-            contribution_map[
-                10:14,
-                0:5
-            ].sum(),
-
-        "Lower-central region":
-            contribution_map[
-                10:14,
-                5:10
-            ].sum(),
-
-        "Lower-right region":
-            contribution_map[
-                10:14,
-                10:14
-            ].sum()
-    }
-
-    sorted_regions = sorted(
-        regions.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )
+    # Regional contribution summary
+    regions = {}
+    for i, (r0, r1) in enumerate(ROW_BOUNDS):
+        for j, (c0, c1) in enumerate(COL_BOUNDS):
+            regions[REGION_NAMES[i][j]] = contribution_map[r0:r1, c0:c1].sum()
 
     top_regions = [
-        {
-            "name": name,
-            "contribution": round(
-                value,
-                2
-            )
-        }
-        for name, value
-        in sorted_regions[:3]
+        {"name": name, "contribution": round(float(value), 2)}
+        for name, value in sorted(
+            regions.items(), key=lambda x: x[1], reverse=True
+        )[:3]
         if value > 0
     ]
 
     return {
-        "class_name": class_name,
-        "confidence": round(
-            confidence_percentage,
-            2
-        ),
+        "predicted_cell_type": CLASSES[predicted_index].replace("im_", ""),
+        "abnormality_score": round(abnormality_score * 100, 2),
+        "risk_indicator": level,
+        "recommendation": RECOMMENDATION[level],
+        "explained_target": explained_target,
         "top_regions": top_regions,
-        "heatmap_path": output_path
+        "heatmap_path": output_path,
+        "disclaimer": DISCLAIMER,
+        "confidence": round(
+    float(base_probs[predicted_index]) * 100, 2
+),
     }
 
+
+if __name__ == "__main__":
+    import sys
+    import json
+
+    if len(sys.argv) != 3:
+        print("Usage: python explain_risk.py <image_path> <output_heatmap.png>")
+        raise SystemExit
+
+    print("Usage: python explain_vit.py <image_path> <output_heatmap.png>")

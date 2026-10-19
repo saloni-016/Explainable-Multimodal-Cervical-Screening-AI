@@ -1,344 +1,100 @@
+"""
+Predict an abnormality indicator for one cervical-cell image.
+
+Usage:
+    python train_vit.py path/to/cell_image.jpg
+
+This supports educational screening only. It is NOT a diagnosis.
+"""
 import os
+import sys
 import json
 import torch
-import numpy as np
-
-from torchvision import datasets, transforms
-from torchvision.models import vit_b_16, ViT_B_16_Weights
-from torch.utils.data import DataLoader, Subset
-from torch import nn, optim
-
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, accuracy_score
-
+from PIL import Image
+from torch import nn
+from torchvision import transforms
+from torchvision.models import vit_b_16
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "vit_sipakmed.pth")
+CONFIG_PATH = os.path.join(BASE_DIR, "sipakmed_classes.json")
 
-DATA_DIR = os.path.normpath(
-    os.path.join(BASE_DIR, "..", "sipakmed_images")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+    CLASSES = json.load(f)
+
+# Provisional settings: verify against your model's training setup.
+ABNORMAL_IDX = [
+    CLASSES.index("im_Dyskeratotic"),
+    CLASSES.index("im_Koilocytotic"),
+]
+FLAG_THRESHOLD = 0.40
+HIGH_RISK_MIN = 0.70
+
+DISCLAIMER = (
+    "Educational demonstration only. This AI output is not a diagnosis "
+    "and must not replace professional medical evaluation."
 )
 
-if not os.path.exists(DATA_DIR):
-    print("ERROR: sipakmed_images folder was not found.")
-    print(DATA_DIR)
-    raise SystemExit
-
-
-train_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomRotation(10),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
-])
-
-
-test_transform = transforms.Compose([
+transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
+        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    ),
 ])
 
-
-print("Loading SIPAKMED dataset...")
-
-dataset = datasets.ImageFolder(
-    root=DATA_DIR,
-    transform=train_transform
-)
-
-print("Number of images:", len(dataset))
-print("Classes:", dataset.classes)
-print("Class mapping:", dataset.class_to_idx)
+model = vit_b_16(weights=None)
+model.heads.head = nn.Linear(model.heads.head.in_features, len(CLASSES))
+model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+model = model.to(DEVICE).eval()
 
 
-if len(dataset.classes) != 5:
-    print("WARNING: Expected 5 classes, found:", len(dataset.classes))
+def risk_level(score):
+    if score >= HIGH_RISK_MIN:
+        return "High"
+    if score >= FLAG_THRESHOLD:
+        return "Moderate"
+    return "Low"
 
 
-print("\nImages in each class:")
-
-for class_name, class_index in dataset.class_to_idx.items():
-    count = sum(
-        1 for label in dataset.targets
-        if label == class_index
-    )
-    print(class_name, ":", count)
-
-
-targets = np.array(dataset.targets)
-indices = np.arange(len(dataset))
+RECOMMENDATION = {
+    "Low": "No strong abnormal features detected. Continue routine screening "
+           "as advised by your doctor.",
+    "Moderate": "Some abnormal features detected. Please arrange a follow-up "
+                "with a healthcare professional.",
+    "High": "Significant abnormal features detected. Please consult a "
+            "healthcare professional promptly for further evaluation.",
+}
 
 
-train_indices, temp_indices = train_test_split(
-    indices,
-    test_size=0.30,
-    random_state=42,
-    stratify=targets
-)
-
-
-val_indices, test_indices = train_test_split(
-    temp_indices,
-    test_size=0.50,
-    random_state=42,
-    stratify=targets[temp_indices]
-)
-
-
-print("\nDataset split:")
-print("Training:", len(train_indices))
-print("Validation:", len(val_indices))
-print("Testing:", len(test_indices))
-
-
-train_dataset = Subset(
-    dataset,
-    train_indices
-)
-
-
-test_dataset_full = datasets.ImageFolder(
-    root=DATA_DIR,
-    transform=test_transform
-)
-
-
-val_dataset = Subset(
-    test_dataset_full,
-    val_indices
-)
-
-test_dataset = Subset(
-    test_dataset_full,
-    test_indices
-)
-
-
-BATCH_SIZE = 32
-
-
-train_loader = DataLoader(
-    train_dataset,
-    batch_size=BATCH_SIZE,
-    shuffle=True
-)
-
-val_loader = DataLoader(
-    val_dataset,
-    batch_size=BATCH_SIZE,
-    shuffle=False
-)
-
-test_loader = DataLoader(
-    test_dataset,
-    batch_size=BATCH_SIZE,
-    shuffle=False
-)
-
-
-DEVICE = torch.device(
-    "cuda" if torch.cuda.is_available() else "cpu"
-)
-
-print("\nDevice:", DEVICE)
-
-
-weights = ViT_B_16_Weights.DEFAULT
-
-model = vit_b_16(
-    weights=weights
-)
-
-model.heads.head = nn.Linear(
-    model.heads.head.in_features,
-    len(dataset.classes)
-)
-
-model = model.to(DEVICE)
-
-
-criterion = nn.CrossEntropyLoss()
-
-optimizer = optim.AdamW(
-    model.parameters(),
-    lr=0.00001,
-    weight_decay=0.01
-)
-
-
-EPOCHS = 10
-
-print("\nStarting training...\n")
-
-
-for epoch in range(EPOCHS):
-
-    model.train()
-
-    running_loss = 0.0
-    correct = 0
-    total = 0
-
-    for images, labels in train_loader:
-
-        images = images.to(DEVICE)
-        labels = labels.to(DEVICE)
-
-        optimizer.zero_grad()
-
-        outputs = model(images)
-
-        loss = criterion(
-            outputs,
-            labels
-        )
-
-        loss.backward()
-
-        optimizer.step()
-
-        running_loss += loss.item()
-
-        _, predicted = torch.max(
-            outputs,
-            1
-        )
-
-        total += labels.size(0)
-
-        correct += (
-            predicted == labels
-        ).sum().item()
-
-
-    train_accuracy = 100 * correct / total
-
-
-    model.eval()
-
-    val_correct = 0
-    val_total = 0
+def predict_risk(image_path):
+    image = Image.open(image_path).convert("RGB")
+    tensor = transform(image).unsqueeze(0).to(DEVICE)
 
     with torch.no_grad():
+        probs = torch.softmax(model(tensor), dim=1)[0].cpu()
 
-        for images, labels in val_loader:
+    score = float(probs[ABNORMAL_IDX].sum())
+    level = risk_level(score)
 
-            images = images.to(DEVICE)
-            labels = labels.to(DEVICE)
-
-            outputs = model(images)
-
-            _, predicted = torch.max(
-                outputs,
-                1
-            )
-
-            val_total += labels.size(0)
-
-            val_correct += (
-                predicted == labels
-            ).sum().item()
+    return {
+        "predicted_cell_type": CLASSES[int(probs.argmax())],
+        "class_probabilities": {
+            c: round(float(p), 4) for c, p in zip(CLASSES, probs)
+        },
+        "abnormality_score": round(score, 4),
+        "risk_indicator": level,
+        "recommendation": RECOMMENDATION[level],
+        "disclaimer": DISCLAIMER,
+    }
 
 
-    val_accuracy = 100 * val_correct / val_total
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python predict_risk.py <image_path>")
+        raise SystemExit
 
-    average_loss = (
-        running_loss / len(train_loader)
-    )
-
-    print(
-        f"Epoch [{epoch + 1}/{EPOCHS}] "
-        f"Loss: {average_loss:.4f} "
-        f"Train Accuracy: {train_accuracy:.2f}% "
-        f"Validation Accuracy: {val_accuracy:.2f}%"
-    )
-
-
-print("\nTesting model...")
-
-model.eval()
-
-all_predictions = []
-all_labels = []
-
-with torch.no_grad():
-
-    for images, labels in test_loader:
-
-        images = images.to(DEVICE)
-        labels = labels.to(DEVICE)
-
-        outputs = model(images)
-
-        _, predicted = torch.max(
-            outputs,
-            1
-        )
-
-        all_predictions.extend(
-            predicted.cpu().numpy()
-        )
-
-        all_labels.extend(
-            labels.cpu().numpy()
-        )
-
-
-test_accuracy = accuracy_score(
-    all_labels,
-    all_predictions
-)
-
-print(
-    "\nTest Accuracy:",
-    f"{test_accuracy * 100:.2f}%"
-)
-
-print("\nClassification Report:\n")
-
-print(
-    classification_report(
-        all_labels,
-        all_predictions,
-        target_names=dataset.classes
-    )
-)
-
-
-MODEL_PATH = os.path.join(
-    BASE_DIR,
-    "vit_sipakmed.pth"
-)
-
-torch.save(
-    model.state_dict(),
-    MODEL_PATH
-)
-
-
-CLASS_PATH = os.path.join(
-    BASE_DIR,
-    "sipakmed_classes.json"
-)
-
-with open(CLASS_PATH, "w") as file:
-    json.dump(
-        dataset.classes,
-        file
-    )
-
-
-print("\nModel saved at:")
-print(MODEL_PATH)
-
-print("\nClasses saved at:")
-print(CLASS_PATH)
-
-print("\nTraining completed successfully.")
+    result = predict_risk(sys.argv[1])
+    print(json.dumps(result, indent=2))
