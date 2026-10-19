@@ -542,13 +542,39 @@ font-size: 17px;
 
             </article>
 
-            <!-- Screening history -->
+            
+            
+            <!-- Combined assessment -->
+
+            <article class="dashboard-card">
+
+                <div class="card-icon">✧</div>
+
+                <div class="card-number">03</div>
+
+                <h2>Combined Assessment</h2>
+
+                <p>
+                    Complete the clinical questionnaire and upload a
+                    cervical-cell image in one workflow. Review the
+                    clinical model estimate and image classification
+                    separately, with their explanations.
+                </p>
+
+                <a href="{{ url_for('combined_assessment') }}"
+                   class="card-button">
+                    <span>Start Combined Assessment</span>
+                    <span>→</span>
+                </a>
+
+            </article>
+<!-- Screening history -->
 
             <article class="dashboard-card">
 
                 <div class="card-icon">↗</div>
 
-                <div class="card-number">03</div>
+                <div class="card-number">04</div>
 
                 <h2>Screening History</h2>
 
@@ -560,29 +586,6 @@ font-size: 17px;
                 <a href="{{ url_for('history') }}"
                    class="card-button secondary">
                     <span>View History</span>
-                    <span>→</span>
-                </a>
-
-            </article>
-
-            <!-- Compare results -->
-
-            <article class="dashboard-card">
-
-                <div class="card-icon">⇄</div>
-
-                <div class="card-number">04</div>
-
-                <h2>Compare Results</h2>
-
-                <p>
-                    Compare your two most recent saved clinical assessments
-                    to review changes in the model-generated estimates.
-                </p>
-
-                <a href="{{ url_for('compare') }}"
-                   class="card-button secondary">
-                    <span>Compare Results</span>
                     <span>→</span>
                 </a>
 
@@ -623,7 +626,7 @@ font-size: 17px;
 
             <div class="info-item">
                 <strong>02</strong>
-                <span>Upload a supported cell image</span>
+                <span>Upload a cell image when using image analysis</span>
             </div>
 
             <div class="info-item">

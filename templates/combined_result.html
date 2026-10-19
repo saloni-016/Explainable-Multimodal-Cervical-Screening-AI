@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f8f5fb">
+
+    <title>CerviAI | Combined Assessment Results</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --purple: #7546a0;
+            --purple-dark: #52316f;
+            --purple-light: #eee5f6;
+            --background: #f8f5fb;
+            --text: #30223a;
+            --muted: #817589;
+            --border: #e9dfef;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        .navbar {
+            min-height: 72px;
+            padding: 15px 7%;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #261b35;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .logo-mark {
+            width: 31px;
+            height: 31px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9px;
+            background: #7b4bb7;
+            color: white;
+        }
+
+        .logo span:last-child {
+            color: #7b4bb7;
+        }
+
+        .nav-link {
+            color: var(--purple);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1100px;
+            margin: 38px auto;
+        }
+
+        .page-heading {
+            margin-bottom: 24px;
+        }
+
+        .eyebrow {
+            color: var(--purple);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1.7px;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: clamp(27px, 4vw, 38px);
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+
+        .page-heading p {
+            color: var(--muted);
+            line-height: 1.8;
+            font-size: 14px;
+        }
+
+        .notice {
+            background: #f0e8f8;
+            border: 1px solid #e5d7f0;
+            padding: 18px 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            color: #62516f;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .notice strong {
+            color: var(--purple-dark);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 22px;
+            align-items: start;
+        }
+
+        .result-card {
+            min-width: 0;
+            padding: 26px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 6px 22px rgba(65, 38, 81, 0.035);
+        }
+
+        .card-label {
+            color: var(--purple);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        h2 {
+            font-size: 21px;
+            line-height: 1.4;
+            margin-bottom: 17px;
+        }
+
+        h3 {
+            font-size: 15px;
+            line-height: 1.5;
+            margin: 0 0 14px;
+        }
+
+        .result-value {
+            padding: 17px;
+            background: #f7f1fb;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            margin-bottom: 16px;
+        }
+
+        .result-value span {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            margin-bottom: 7px;
+        }
+
+        .result-value strong {
+            color: var(--purple-dark);
+            font-size: 24px;
+            overflow-wrap: anywhere;
+        }
+
+        .result-value .small-value {
+            font-size: 20px;
+        }
+
+        .description {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+        }
+
+        .subsection {
+            margin-top: 24px;
+            padding-top: 19px;
+            border-top: 1px solid var(--border);
+        }
+
+        .factor-item {
+            padding: 14px;
+            margin: 12px 0;
+            background: #faf7fc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+        }
+
+        .factor-item > strong {
+            display: block;
+            color: var(--purple-dark);
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .factor-item p {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .factor-item p strong {
+            color: var(--text);
+        }
+
+        .explanation-list {
+            padding-left: 20px;
+            color: #62556c;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .explanation-list li {
+            margin-bottom: 8px;
+            overflow-wrap: anywhere;
+        }
+
+        .visual {
+            width: 100%;
+            display: block;
+            height: auto;
+            max-height: 390px;
+            object-fit: contain;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-top: 12px;
+            background: #faf8fc;
+        }
+
+        .empty-text {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 13px 19px;
+            border: 1px solid var(--purple);
+            border-radius: 9px;
+            background: var(--purple);
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .button:hover {
+            background: var(--purple-dark);
+        }
+
+        .button.secondary {
+            background: white;
+            color: var(--purple);
+        }
+
+        .button.secondary:hover {
+            background: var(--purple-light);
+        }
+
+        .footer {
+            margin-top: 28px;
+            padding: 20px 10px;
+            text-align: center;
+            color: #897c91;
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        @media (max-width: 760px) {
+            .navbar {
+                padding: 15px 5%;
+            }
+
+            .logo {
+                font-size: 21px;
+            }
+
+            .container {
+                width: 92%;
+                margin-top: 27px;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .result-card {
+                padding: 22px;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .button {
+                width: 100%;
+            }
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .nav-links a {
+            color: #65596e;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .nav-links :hover {
+            color: #7546a8;
+        }
+
+        .nav-links a.active {
+      
+            padding: 10px 14px;
+            border-radius: 9px;
+        }
+
+        .logout-link {
+            border: 1px solid #e7d9f3;
+            padding: 10px 15px;
+            border-radius: 9px;
+        }
+        /* Navbar */
+        .history-navbar {
+            background: rgba(255, 255, 255, 0.96);
+            border-bottom: 1px solid #eee6f3;
+            padding: 0 7%;
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+   .navbar {
+height: 68px;
+padding: 0 7%;
+display: flex;
+align-items: center;
+justify-content: space-between;
+background: #f6f1fa;
+border-bottom: 1px solid #eeeaf3;
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+z-index: 100;
+}
+
+.logo {
+text-decoration: none;
+font-size: 25px;
+font-weight: 700;
+color: #261b35;
+display: flex;
+align-items: center;
+gap: 7px;
+}
+
+.logo span:last-child {
+color: #7b4bb7;
+}
+
+.logo-mark {
+width: 31px;
+height: 31px;
+border-radius: 9px;
+background: #7b4bb7;
+color: white;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+font-size: 17px;
+}
+    </style>
+</head>
+
+<body>
+
+<!-- Navigation bar -->
+    <nav class="history-navbar">
+      <a href="/" class="logo">
+            <span class="logo-mark">✦</span>
+            Cervi<span>AI</span>
+        </a>
+        
+
+        <div class="nav-links">
+            <a href="{{ url_for('choose') }}">Dashboard</a>
+            <a href="{{ url_for('details') }}">Clinical Assessment</a>
+            <a href="{{ url_for('image_upload') }}">Cell Analysis</a>
+            <a href="{{ url_for('history') }}" class="active">
+                History
+            </a>
+            <a href="{{ url_for('combined_assessment') }}">Combined</a>
+            <a href="{{ url_for('logout') }}" class="logout-link">
+                Logout
+            </a>
+        </div>
+    </nav>
+ 
+
+<main class="container">
+
+    <section class="page-heading">
+        <div class="eyebrow">ASSESSMENT COMPLETE</div>
+        <h1>Your Combined Assessment Results</h1>
+        <p>
+            Review the outputs from the clinical risk model and the
+            cervical-cell image model below.
+        </p>
+    </section>
+
+    <section class="notice">
+        <strong>Important:</strong>
+        CerviAI is an experimental educational screening-support tool,
+        not a medical diagnosis. These are two independent model outputs.
+        The clinical model estimate and image abnormality indicator measure
+        different things and must not be treated as a single combined score.
+        Discuss screening and medical concerns with a qualified healthcare
+        professional.
+    </section>
+
+    <section class="results-grid">
+
+        <!-- Clinical model result -->
+
+        <article class="result-card">
+
+            <div class="card-label">ASSESSMENT 01</div>
+            <h2>Clinical Risk Assessment</h2>
+
+            <div class="result-value">
+                <span>Model-generated risk category</span>
+                <strong class="small-value">
+                    {{ clinical.get('risk_level', 'Not available') }}
+                </strong>
+            </div>
+
+            <div class="result-value">
+                <span>Model-estimated positive-class probability</span>
+                <strong>
+                    {% if clinical.get('prob_percent') is not none %}
+                        {{ "%.2f"|format(clinical.get('prob_percent')|float) }}%
+                    {% else %}
+                        Not available
+                    {% endif %}
+                </strong>
+            </div>
+
+            <p class="description">
+                This is the model's estimated probability for its positive
+                class based on the submitted clinical information. It is
+                not a confirmed probability of having cervical cancer and
+                does not establish a diagnosis.
+            </p>
+
+            <!-- Factors highlighted by the clinical model -->
+
+            <div class="subsection">
+
+                <h3>Factors Highlighted by the Model</h3>
+
+                {% if clinical.get('factors') %}
+
+                    {% for factor in clinical.get('factors', []) %}
+
+                        <div class="factor-item">
+
+                            <strong>
+                                {{ loop.index }}.
+                                {{ factor.get('name', 'Feature') }}
+                            </strong>
+
+                            <p>
+                                <strong>Value:</strong>
+
+                                {% if factor.get('value') is not none %}
+
+                                    {% set feature_name = factor.get('name', '') %}
+                                    {% set feature_value = factor.get('value') %}
+
+                                    {% if feature_name in ['Age', 'First sexual intercourse'] %}
+                                        {{ feature_value }} years
+
+                                    {% elif feature_name in ['Smokes', 'STDs', 'IUD', 'Hormonal Contraceptives', 'Dx:Cancer', 'Dx:CIN', 'Dx:HPV'] %}
+                                        {% if feature_value|float == 1 %}
+                                            Yes
+                                        {% elif feature_value|float == 0 %}
+                                            No
+                                        {% else %}
+                                            {{ feature_value }}
+                                        {% endif %}
+
+                                    {% else %}
+                                        {{ feature_value }}
+                                    {% endif %}
+
+                                {% else %}
+                                    Not available
+                                {% endif %}
+                            </p>
+
+                            <p>
+                                <strong>SHAP influence:</strong>
+
+                                {% if factor.get('influence') is not none %}
+                                    {{ "%.1f"|format(factor.get('influence')|float) }}%
+                                {% elif factor.get('contribution') is not none %}
+                                    {{ "%.1f"|format(factor.get('contribution')|float) }}%
+                                {% else %}
+                                    Not available
+                                {% endif %}
+                            </p>
+
+                            <p>
+                                <strong>Effect:</strong>
+
+                                {% if factor.get('direction') == 'higher' %}
+                                    Pushed the model's predicted output higher.
+
+                                {% elif factor.get('direction') == 'lower' %}
+                                    Pushed the model's predicted output lower.
+
+                                {% elif factor.get('direction') == 'little' %}
+                                    Had little influence on the model output.
+
+                                {% else %}
+                                    {{ factor.get('direction', 'Not available') }}
+                                {% endif %}
+                            </p>
+
+                        </div>
+
+                    {% endfor %}
+
+                    <p class="description">
+                        These percentages represent the relative SHAP
+                        influence of the displayed factors on this model
+                        prediction. They do not represent individual
+                        medical risk percentages or prove causation.
+                    </p>
+
+                {% else %}
+
+                    <p class="empty-text">
+                        No feature-level explanations are available.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <!-- Full explanation generated by explain_xgboost.py -->
+
+            <div class="subsection">
+
+                <h3>Detailed Clinical Explanation</h3>
+
+                {% if clinical.get('explanation_text') %}
+
+                    <div class="description"
+                         style="line-height: 1.9;">
+
+                        {% for line in clinical.get('explanation_text', '').splitlines() %}
+
+                            {% if line.strip() %}
+                                <p style="margin-bottom: 10px;">
+                                    {{ line }}
+                                </p>
+                            {% else %}
+                                <div style="height: 6px;"></div>
+                            {% endif %}
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <p class="empty-text">
+                        No detailed clinical explanation is available.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <p class="description" style="margin-top: 18px;">
+                This is an experimental AI screening-support result,
+                not a medical diagnosis. Please consult a qualified
+                healthcare professional for appropriate screening advice.
+            </p>
+
+        </article>
+
+
+        <!-- Image model result -->
+
+        <article class="result-card">
+
+            <div class="card-label">ASSESSMENT 02</div>
+            <h2>CerviAI — Image Analysis Result</h2>
+
+            <p class="description">
+                Preliminary AI result for educational screening support only.
+            </p>
+
+            <div class="subsection">
+
+                <h3>Image-Based Indicator</h3>
+
+                <div class="result-value">
+                    <span>Risk indicator</span>
+
+                    <strong class="small-value">
+                        {{ image.get('risk_indicator', 'Unavailable') | title }}
+                    </strong>
+                </div>
+
+                <div class="result-value">
+                    <span>Predicted cell type</span>
+
+                    <strong class="small-value">
+                        {{ image.get('class_name', 'Not available')
+                            | replace('im_', '')
+                            | replace('_', ' ')
+                            | replace('-', ' ') }}
+                    </strong>
+                </div>
+
+                <div class="result-value">
+                    <span>Model-derived abnormality indicator score</span>
+
+                    <strong>
+                        {% if image.get('abnormality_score') is not none %}
+                            {{ image.get('abnormality_score') }}%
+                        {% else %}
+                            Not available
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <p class="description">
+                    
+    This score shows how strongly the AI model detected patterns
+    linked to abnormal cells in your uploaded image. It does not
+    mean you have a {{ image.get('abnormality_score', 'unavailable') }}%
+    chance of cervical cancer. Please consult a healthcare
+    professional to understand your result and whether further
+    screening is needed.
+
+                </p>
+
+            </div>
+
+            <div class="subsection">
+
+                <h3>Uploaded Cell Image</h3>
+
+                {% if image_path %}
+
+                    <img
+                        src="{{ image_path }}"
+                        alt="Uploaded cervical cell image"
+                        class="visual"
+                    >
+
+                {% else %}
+
+                    <p class="empty-text">
+                        Uploaded image is not available.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <div class="subsection">
+
+                <h3>Visual Explanation — Heatmap</h3>
+
+                {% if heatmap_path %}
+
+                    <img
+                        src="{{ heatmap_path }}"
+                        alt="Heatmap showing image regions that influenced the model output"
+                        class="visual"
+                    >
+
+                {% else %}
+
+                    <p class="empty-text">
+                        Heatmap is not available.
+                    </p>
+
+                {% endif %}
+
+                {% if image.get('heatmap_message') %}
+
+                    <p class="description" style="margin-top: 12px;">
+                        {{ image.get('heatmap_message') }}
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <div class="subsection">
+
+                <h3>What Does This Result Mean?</h3>
+
+                <p class="description">
+    This result reflects the image model's prediction, not a medical
+    diagnosis. The predicted cell category and heatmap may help illustrate
+    which image patterns influenced the model, but they cannot confirm
+    or rule out cervical cancer. A qualified healthcare professional
+    should interpret the result and recommend any necessary follow-up.
+</p>
+
+            </div>
+
+            <div class="subsection">
+
+                <h3>Recommended Next Steps</h3>
+
+                <ol class="explanation-list">
+
+                    <li>
+                        Discuss the result with a qualified healthcare
+                        professional.
+                    </li>
+
+                    <li>
+                        Ask whether an HPV test, Pap test, or further
+                        evaluation is appropriate.
+                    </li>
+
+                    <li>
+                        Follow the screening and follow-up advice given
+                        by your healthcare professional.
+                    </li>
+
+                    <li>
+                        Keep your screening records and follow-up appointments.
+                    </li>
+
+                </ol>
+
+                {% if image.get('recommendation') %}
+
+                    <p class="description" style="margin-top: 12px;">
+                        <strong>Model recommendation:</strong>
+                        {{ image.get('recommendation') }}
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <p class="description" style="margin-top: 18px;">
+                CerviAI is for educational screening support only.
+                This AI result is not a diagnosis and should not replace
+                professional medical evaluation.
+            </p>
+
+        </article>
+
+    </section>
+
+
+    <section class="notice" style="margin-top: 25px; margin-bottom: 0;">
+        <strong>Important:</strong>
+        The clinical and image models analyse different information.
+        Their outputs are not a validated combined medical risk score.
+        Please seek professional advice for screening and diagnosis.
+    </section>
+
+
+    <div class="actions">
+
+        <a href="{{ url_for('choose') }}" class="button">
+            Back to Dashboard
+        </a>
+
+        <a href="{{ url_for('combined_assessment') }}"
+           class="button secondary">
+            Start New Assessment
+        </a>
+
+    </div>
+
+
+    <footer class="footer">
+        CerviAI • AI-based educational screening support • Not a medical diagnosis
+    </footer>
+
+</main>
+
+{% include "chatbot.html" %}
+
+</body>
+</html>

@@ -1,0 +1,462 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combined Assessment | CerviAI</title>
+
+    <style>
+        :root {
+            --purple: #7546a0;
+            --dark: #52316f;
+            --light: #eee5f6;
+            --bg: #f8f5fb;
+            --text: #30223a;
+            --muted: #817589;
+            --border: #e9dfef;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        nav {
+            background: white;
+            padding: 20px 7%;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+       
+        nav a:last-child {
+            color: var(--purple);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        main {
+            max-width: 950px;
+            width: 92%;
+            margin: 40px auto;
+        }
+
+        h1 {
+            font-size: 34px;
+            margin-bottom: 12px;
+        }
+
+        .intro {
+            color: var(--muted);
+            line-height: 1.8;
+            margin-bottom: 25px;
+        }
+
+        .notice {
+            background: var(--light);
+            border: 1px solid var(--border);
+            padding: 18px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            line-height: 1.7;
+            font-size: 13px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 27px;
+            margin-bottom: 25px;
+        }
+
+        .card h2 {
+            font-size: 21px;
+            margin-bottom: 8px;
+        }
+
+        .card > p {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.7;
+            margin-bottom: 22px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        input:focus, select:focus {
+            outline: 2px solid #d8c2ed;
+            border-color: var(--purple);
+        }
+
+        .upload-box {
+            border: 2px dashed #cbb6df;
+            background: #fcfaff;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .upload-box p {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.7;
+            margin-bottom: 15px;
+        }
+
+        input[type="file"] {
+            border: none;
+            background: transparent;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: var(--purple);
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: var(--dark);
+        }
+
+        .footer {
+            text-align: center;
+            color: var(--muted);
+            font-size: 12px;
+            padding: 20px;
+            line-height: 1.8;
+        }
+
+        @media (max-width: 600px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+        }
+         .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .nav-links a {
+            color: #65596e;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .nav-links :hover {
+            color: #7546a8;
+        }
+
+        .nav-links a.active {
+      
+            padding: 10px 14px;
+            border-radius: 9px;
+        }
+
+        .logout-link {
+            border: 1px solid #e7d9f3;
+            padding: 10px 15px;
+            border-radius: 9px;
+        }
+        /* Navbar */
+        .history-navbar {
+            background: rgba(255, 255, 255, 0.96);
+            border-bottom: 1px solid #eee6f3;
+            padding: 0 7%;
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+   .navbar {
+height: 68px;
+padding: 0 7%;
+display: flex;
+align-items: center;
+justify-content: space-between;
+background: #f6f1fa;
+border-bottom: 1px solid #eeeaf3;
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+z-index: 100;
+}
+
+.logo {
+text-decoration: none;
+font-size: 25px;
+font-weight: 700;
+color: #261b35;
+display: flex;
+align-items: center;
+gap: 7px;
+}
+
+.logo span:last-child {
+color: #7b4bb7;
+}
+
+.logo-mark {
+width: 31px;
+height: 31px;
+border-radius: 9px;
+background: #7b4bb7;
+color: white;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+font-size: 17px;
+}
+    </style>
+</head>
+
+<body>
+
+<!-- Navigation bar -->
+    <nav class="history-navbar">
+      <a href="/" class="logo">
+            <span class="logo-mark">✦</span>
+            Cervi<span>AI</span>
+        </a>
+        
+
+        <div class="nav-links">
+            <a href="{{ url_for('choose') }}">Dashboard</a>
+            <a href="{{ url_for('details') }}">Clinical Assessment</a>
+            <a href="{{ url_for('image_upload') }}">Cell Analysis</a>
+            <a href="{{ url_for('history') }}" class="active">
+                History
+            </a>
+            <a href="{{ url_for('combined_assessment') }}">Combined</a>
+            <a href="{{ url_for('logout') }}" class="logout-link">
+                Logout
+            </a>
+        </div>
+    </nav>
+ 
+
+<main>
+    <h1>Combined Assessment</h1>
+
+    <p class="intro">
+        Enter your clinical information and upload a cervical-cell
+        image in one workflow. CerviAI will display the outputs from
+        its clinical model and image model separately.
+    </p>
+
+    <div class="notice">
+        <strong>Important:</strong>
+        This is an experimental educational prototype, not a
+        clinically validated test or a medical diagnosis. The
+        clinical estimate and image-classification confidence measure
+        different things. Neither can confirm or rule out cancer.
+        Discuss screening with a qualified healthcare professional.
+    </div>
+
+    <form action="{{ url_for('predict_combined') }}"
+          method="POST"
+          enctype="multipart/form-data">
+
+        <section class="card">
+            <h2>01 — Clinical Information</h2>
+
+            <p>
+                Enter the same health-history details used in your
+                existing Clinical Risk Assessment.
+            </p>
+
+            <div class="grid">
+                <div class="field">
+                    <label for="Age">Age (years)</label>
+                    <input id="Age" type="number" name="Age"
+                           min="18" max="100" required>
+                </div>
+
+                <div class="field">
+                    <label for="partners">Number of Sexual Partners</label>
+                    <input id="partners" type="number"
+                           name="Number_of_sexual_partners"
+                           min="0" max="100" required>
+                </div>
+
+                <div class="field">
+                    <label for="first-sex">
+                        Age at First Sexual Intercourse
+                    </label>
+                    <input id="first-sex" type="number"
+                           name="First_sexual_intercourse"
+                           min="0" max="100" required>
+                </div>
+
+                <div class="field">
+                    <label for="Smokes">Do you smoke?</label>
+                    <select id="Smokes" name="Smokes" required>
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="smoke-years">Smoking Duration (years)</label>
+                    <input id="smoke-years" type="number"
+                           name="Smokes_years" min="0" max="100"
+                           step="any" required>
+                </div>
+
+                <div class="field">
+                    <label for="hormonal">Hormonal Contraceptive Use</label>
+                    <select id="hormonal"
+                            name="Hormonal_Contraceptives" required>
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="iud">Use of an IUD</label>
+                    <select id="iud" name="IUD" required>
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="STDs">History of STDs</label>
+                    <select id="STDs" name="STDs" required>
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="std-number">Number of STDs</label>
+                    <input id="std-number" type="number"
+                           name="STDs_number" min="0" max="100" required>
+                </div>
+
+                <div class="field">
+                    <label for="cancer">Previous Cancer Diagnosis</label>
+                    <select id="cancer" name="Dx_Cancer" required>
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="cin">Previous CIN Diagnosis</label>
+                    <select id="cin" name="Dx_CIN" required>
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="hpv">Previous HPV Diagnosis</label>
+                    <select id="hpv" name="Dx_HPV" required>
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>02 — Cervical-Cell Image</h2>
+
+            <p>
+                Upload a supported BMP, JPG, JPEG, or PNG image.
+                The model will predict one of its learned cell categories.
+            </p>
+
+            <div class="upload-box">
+                <p>
+                    Select a cervical-cell image from your device.
+                    Use an image you are authorized to upload.
+                </p>
+
+                <input type="file"
+                       name="scan_image"
+                       id="scan_image"
+                       accept=".bmp,.png,.jpg,.jpeg"
+                       required>
+            </div>
+        </section>
+
+        <button type="submit" id="submit-button">
+            Generate Combined Assessment →
+        </button>
+    </form>
+
+    <footer class="footer">
+        CerviAI · Educational screening support, not a diagnosis
+    </footer>
+</main>
+
+<script>
+    document.querySelector("form").addEventListener("submit", function () {
+        const button = document.getElementById("submit-button");
+        button.disabled = true;
+        button.textContent = "Analyzing both inputs... Please wait";
+    });
+</script>
+
+</body>
+</html>
