@@ -500,7 +500,6 @@ def result():
     )
 
 
-
 @app.route("/predict_combined", methods=["POST"])
 def predict_combined():
     if "email" not in session:
@@ -523,30 +522,40 @@ def predict_combined():
 
     try:
         values = []
+
         for field in field_names:
             raw_value = request.form.get(field, "").strip()
+
             if raw_value == "":
                 return "Please complete all clinical fields.", 400
+
             values.append(float(raw_value))
+
     except ValueError:
         return "Please enter valid numeric clinical values.", 400
 
+    # Validate uploaded image
     image = request.files.get("scan_image")
+
     if image is None or image.filename == "":
         return "Please select a cervical-cell image.", 400
 
     original_filename = secure_filename(image.filename)
     extension = os.path.splitext(original_filename)[1].lower()
-    allowed_extensions = {".bmp", ".png", ".jpg", ".jpeg"}
 
-    if extension not in allowed_extensions:
+    if extension not in {".bmp", ".png", ".jpg", ".jpeg"}:
         return "Use a BMP, PNG, JPG, or JPEG image.", 400
 
+    # --------------------------------------------------
+    # 1. Clinical model
+    # --------------------------------------------------
     try:
         clinical_output = explain_clinical_input(values)
+
         clinical_explanation = create_clinical_explanation(
             clinical_output
         )
+
         probability = float(clinical_output["probability"])
 
         if probability >= 70:
@@ -556,37 +565,83 @@ def predict_combined():
         else:
             clinical_level = "Low Risk"
 
-        clinical_explanations = clinical_output.get("explanations", [])
+        clinical_explanations = clinical_output.get(
+            "explanations", []
+        )
 
         factors = [
-    {
-        "name": item["feature"],
-        "value": item["value"],
-        "influence": item["influence"],
-        "direction": item["direction"]
-    }
-    for item in clinical_explanations
-]
+            {
+                "name": item["feature"],
+                "value": item["value"],
+                "influence": item["influence"],
+                "direction": item["direction"]
+            }
+            for item in clinical_explanations
+        ]
+
     except Exception:
         app.logger.exception("Clinical model failed")
-        return "Clinical assessment failed. Check the Flask terminal.", 500
+        return (
+            "Clinical assessment failed. Check the Flask terminal.",
+            500
+        )
 
+    # --------------------------------------------------
+    # 2. Image model
+    # --------------------------------------------------
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+
     image_filename = f"combined_{timestamp}{extension}"
     explanation_filename = f"combined_explanation_{timestamp}.png"
 
     image_path = os.path.join(UPLOAD_FOLDER, image_filename)
+
     heatmap_file_path = os.path.join(
-        EXPLANATION_FOLDER, explanation_filename
+        EXPLANATION_FOLDER,
+        explanation_filename
     )
 
     try:
         image.save(image_path)
-        image_output = explain_image(image_path, heatmap_file_path)
+
+        image_output = explain_image(
+            image_path,
+            heatmap_file_path
+        )
+
+        clinical_indicator = clinical_level.lower().replace(
+            " risk", ""
+        )
+
+        image_indicator = str(
+            image_output.get("risk_indicator", "")
+        ).strip().lower()
+
+        if image_indicator == "moderate":
+            image_indicator = "medium"
+
+        mismatch_alert = (
+            (
+                clinical_indicator == "high"
+                and image_indicator == "low"
+            )
+            or
+            (
+                clinical_indicator == "low"
+                and image_indicator == "high"
+            )
+        )
+
     except Exception:
         app.logger.exception("ViT image explanation failed")
-        return "Image analysis failed. Check the Flask terminal.", 500
+        return (
+            "Image analysis failed. Check the Flask terminal.",
+            500
+        )
 
+    # --------------------------------------------------
+    # 3. Store both model outputs
+    # --------------------------------------------------
     session["last_combined_result"] = make_json_safe({
         "clinical": {
             "risk_level": clinical_level,
@@ -595,6 +650,7 @@ def predict_combined():
             "factors": factors,
             "explanation_text": clinical_explanation
         },
+
         "image": {
             "image_file": image_filename,
             "class_name": image_output["predicted_cell_type"],
@@ -605,38 +661,223 @@ def predict_combined():
             "explained_target": image_output["explained_target"],
             "top_regions": image_output["top_regions"],
             "explanation_image": explanation_filename,
+
             "heatmap_message": (
-                "The heatmap shows image regions influencing the model. "
-                "It does not confirm cancer or personal cancer risk."
+                "The heatmap highlights image regions that influenced "
+                "the model. It does not confirm cancer or personal risk."
             ),
+
             "explanation": [
-                f"Predicted cell category: "
-                f"{image_output['predicted_cell_type']}.",
+                (
+                    "Predicted cell category: "
+                    f"{image_output['predicted_cell_type']}."
+                ),
                 image_output["recommendation"]
             ],
-            "disclaimer": image_output["disclaimer"]
+
+            "disclaimer": image_output["disclaimer"],
+            "mismatch_alert": mismatch_alert,
+
+            "mismatch_message": (
+                "The model indicators differ. Please discuss the findings "
+                "with a qualified healthcare professional."
+                if mismatch_alert else ""
+            )
         }
     })
 
+    # --------------------------------------------------
+    # 4. Generate a polished explanation using the LLM
+    # --------------------------------------------------
+    combined_explanation = (
+        "The AI-generated interpretation is currently unavailable. "
+        "Please review the individual model results with a qualified "
+        "healthcare professional."
+    )
+
     try:
-        conn = sqlite3.connect("database.db")
-        conn.execute(
-            """
-            INSERT INTO results (email, risk_level, probability, created_at)
-            VALUES (?, ?, ?, ?)
-            """,
+        
+        factor_summary = "\n".join(
             (
-                session["email"],
-                clinical_level,
-                round(probability, 2),
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                f"Feature: {factor.get('name', 'Unknown')}; "
+                f"Value: {factor.get('value', 'Unavailable')}; "
+                f"Influence: {factor.get('influence', 'Unavailable')}; "
+                f"Direction: {factor.get('direction', 'Unavailable')}"
             )
+            for factor in factors
         )
-        conn.commit()
-        conn.close()
+
+        prompt = f"""
+You are CerviAI's patient-friendly explanation assistant.
+
+Your task is to help the user UNDERSTAND their results, not merely
+repeat the numbers already displayed on the results page.
+
+ACTUAL MODEL OUTPUTS
+
+Clinical category: {clinical_level}
+Clinical model probability: {round(probability, 2)}%
+Clinical explanation: {clinical_explanation}
+Clinical feature explanations:
+{factor_summary}
+
+Predicted image cell category:
+{image_output.get('predicted_cell_type', 'Unavailable')}
+
+Image model confidence:
+{image_output.get('confidence', 'Unavailable')}
+
+Image abnormality score:
+{image_output.get('abnormality_score', 'Unavailable')}
+
+Image model indicator:
+{image_output.get('risk_indicator', 'Unavailable')}
+
+Image model recommendation:
+{image_output.get('recommendation', 'Unavailable')}
+
+WRITE THE INTERPRETATION IN THIS STRUCTURE
+
+Understanding the Results
+Briefly explain what the two models examined and why they provide
+different types of information.
+
+What the Clinical Results Tell You
+Explain what the model prediction means and how the important
+features influenced its output. Do not simply repeat every value.
+
+What the Image Analysis Can Tell You
+Explain what the predicted cell category means in the context of
+an image-classification model, and explain the limitations of
+confidence and abnormality scores.
+
+Putting the Findings in Context
+Explain why the two outputs may differ without treating them as
+a contradiction or combining them into one risk score. Explain
+what information these models cannot establish from their outputs.
+
+What You Can Do Next
+Give practical, cautious suggestions for discussing the findings
+with a qualified healthcare professional. Suggest relevant
+questions the user could ask about appropriate screening,
+confirmatory testing, and follow-up.
+
+WRITING RULES
+
+1. Write in natural, polished, empathetic English.
+2. Use short paragraphs and plain-text headings.
+3. Do not use Markdown. No asterisks, hashtags, bullet symbols,
+   tables, or Markdown bold formatting.
+4. Add useful explanation beyond the displayed scores, but do not
+   invent medical facts, personal history, symptoms, or test results.
+5. Do not assume that the model has information it was not given.
+6. Explain that clinical probability is a model output, not a
+   confirmed personal probability of cervical disease.
+7. Image confidence describes the model's confidence in its
+   predicted category, not the probability of cancer.
+8. An abnormality score is not a cancer probability or a diagnosis.
+9. Do not claim that the image confirms HPV, precancer, or cancer.
+10. Do not independently diagnose, assign urgency, or invent a
+    combined medical risk score.
+11. Avoid repeating the same disclaimer in every section.
+12. End with a concise statement that CerviAI is an educational
+    screening-support tool, not a diagnostic system.
+
+Return only the interpretation in plain text.
+"""
+
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Write informative, natural, patient-friendly "
+                        "health explanations using only the supplied "
+                        "information. Return plain text, not Markdown. "
+                        "Be accurate, cautious, and non-alarmist."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.4,
+            max_tokens=750
+        )
+
+        generated_text = response.choices[0].message.content
+
+        if generated_text and generated_text.strip():
+            import re
+
+            cleaned_text = generated_text.strip()
+
+            # Remove escaped and unescaped Markdown formatting
+            cleaned_text = re.sub(
+                r"\\?(\*{1,2}|_{1,2}|`{1,3})",
+                "",
+                cleaned_text
+            )
+
+            # Remove Markdown heading markers
+            cleaned_text = re.sub(
+                r"(?m)^\s{0,3}#{1,6}\s*",
+                "",
+                cleaned_text
+            )
+
+            # Remove Markdown bullet markers at the start of lines
+            cleaned_text = re.sub(
+                r"(?m)^\s*[-+]\s+",
+                "",
+                cleaned_text
+            )
+
+            cleaned_text = re.sub(
+                r"(?m)^\s*\*\s+",
+                "",
+                cleaned_text
+            )
+
+            combined_explanation = cleaned_text.strip()
+
+
+    except Exception:
+        app.logger.exception("Combined AI explanation failed")
+
+    # --------------------------------------------------
+    # 5. Save the generated explanation in the session
+    # --------------------------------------------------
+    session["last_combined_result"]["combined_explanation"] = (
+        combined_explanation
+    )
+    session.modified = True
+
+    # --------------------------------------------------
+    # 6. Save assessment history
+    # --------------------------------------------------
+    try:
+        with sqlite3.connect("database.db") as conn:
+            conn.execute(
+                """
+                INSERT INTO results
+                    (email, risk_level, probability, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    session["email"],
+                    clinical_level,
+                    round(probability, 2),
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                )
+            )
+
     except Exception:
         app.logger.exception("Could not save combined assessment")
 
+    # Redirect only after all processing is complete
     return redirect(url_for("combined_result"))
 
 
@@ -663,13 +904,16 @@ def combined_result():
         filename="explanations/" + image.get("explanation_image", "")
     )
 
+    
     return render_template(
-        "combined_result.html",
-        clinical=clinical,
-        image=image,
-        image_path=image_path,
-        heatmap_path=heatmap_path
-    )
+    "combined_result.html",
+    clinical=clinical,
+    image=image,
+    image_path=image_path,
+    heatmap_path=heatmap_path,
+    combined_explanation=combined.get("combined_explanation", "")
+)
+
 
 
 
