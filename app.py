@@ -48,6 +48,7 @@ UPLOAD_FOLDER = "static/uploads"
 EXPLANATION_FOLDER = "static/explanations"
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+#app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(EXPLANATION_FOLDER, exist_ok=True)
@@ -60,6 +61,8 @@ imputer = joblib.load("imputer.pkl")
 def init_db():
 
     conn = sqlite3.connect("database.db")
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=10000")
     cur = conn.cursor()
 
     cur.execute("""
@@ -804,7 +807,7 @@ Return only the interpretation in plain text.
                 }
             ],
             temperature=0.4,
-            max_tokens=750
+            max_tokens=1000
         )
 
         generated_text = response.choices[0].message.content
